@@ -142,10 +142,10 @@ CREATE TABLE videos (
 INSERT INTO users
 (email, password, role)
 VALUES
-('admin@mern.com', 'admin123', 'admin'),
-('student1@gmail.com', 'stud123', 'student'),
-('student2@gmail.com', 'stud123', 'student'),
-('student3@gmail.com', 'stud123', 'student');
+('admin@mern.com', '$2b$10$42qW.Q/7L1im7BDfjhI/meSphhaHm7BVtVArs6eBjyBEp9c8vUuE2', 'admin'),
+('student1@gmail.com', '$2b$10$Ra7/G5Mmsi5bLB7AcAhJLuf6mBJ4rTiQgBn9rTdhZOYcQ3s6Rpz4G', 'student'),
+('student2@gmail.com', '$2b$10$Ra7/G5Mmsi5bLB7AcAhJLuf6mBJ4rTiQgBn9rTdhZOYcQ3s6Rpz4G', 'student'),
+('student3@gmail.com', '$2b$10$Ra7/G5Mmsi5bLB7AcAhJLuf6mBJ4rTiQgBn9rTdhZOYcQ3s6Rpz4G', 'student');
 
 
 -- =====================================================
