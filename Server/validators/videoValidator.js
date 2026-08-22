@@ -1,22 +1,51 @@
-const { body, param } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
+const { error } = require('../utils/response');
 
-const createVideoValidation = [
-  body('course_id').isInt({ min: 1 }).withMessage('Course ID is required and must be positive'),
-  body('title').trim().notEmpty().withMessage('Video title is required').isLength({ min: 2, max: 150 }).withMessage('Title must be 2-150 characters'),
-  body('description').optional().trim().isLength({ max: 2000 }).withMessage('Description too long'),
-  body('youtube_url').trim().notEmpty().withMessage('YouTube URL is required').isURL().withMessage('YouTube URL must be a valid URL'),
+function validate(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return error(res, 400, 'Validation failed', errors.array().map((e) => ({ field: e.path, message: e.msg })));
+  }
+  next();
+}
+
+// Reasonably strict but practical YouTube URL check (youtube.com/... or youtu.be/...)
+const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|shorts\/)[\w-]+|youtu\.be\/[\w-]+)([&?][\w=&-]*)?$/i;
+
+const addVideoValidationRules = [
+  body('courseId')
+    .notEmpty().withMessage('courseId is required')
+    .isInt({ min: 1 }).withMessage('courseId must be a valid positive integer'),
+  body('title')
+    .trim()
+    .notEmpty().withMessage('title is required')
+    .isLength({ max: 150 }).withMessage('title must be at most 150 characters'),
+  body('youtubeURL')
+    .trim()
+    .notEmpty().withMessage('youtubeURL is required')
+    .matches(YOUTUBE_URL_REGEX).withMessage('youtubeURL must be a valid YouTube URL'),
+  body('description')
+    .optional({ checkFalsy: true })
+    .isString().withMessage('description must be text'),
 ];
 
-const updateVideoValidation = [
-  param('videoId').isInt({ min: 1 }).withMessage('Video ID must be a positive integer'),
-  body('course_id').optional().isInt({ min: 1 }).withMessage('Course ID must be positive'),
-  body('title').optional().trim().notEmpty().withMessage('Video title cannot be empty').isLength({ min: 2, max: 150 }).withMessage('Title must be 2-150 characters'),
-  body('description').optional().trim().isLength({ max: 2000 }).withMessage('Description too long'),
-  body('youtube_url').optional().trim().notEmpty().withMessage('YouTube URL cannot be empty').isURL().withMessage('YouTube URL must be a valid URL'),
+const updateVideoValidationRules = [
+  param('videoId').isInt({ min: 1 }).withMessage('videoId must be a valid positive integer'),
+  ...addVideoValidationRules,
 ];
 
-const videoIdValidation = [
-  param('videoId').isInt({ min: 1 }).withMessage('Video ID must be a positive integer'),
+const videoIdParamValidationRules = [
+  param('videoId').isInt({ min: 1 }).withMessage('videoId must be a valid positive integer'),
 ];
 
-module.exports = { createVideoValidation, updateVideoValidation, videoIdValidation };
+const courseIdQueryValidationRules = [
+  query('courseId').optional().isInt({ min: 1 }).withMessage('courseId must be a valid positive integer'),
+];
+
+module.exports = {
+  validate,
+  addVideoValidationRules,
+  updateVideoValidationRules,
+  videoIdParamValidationRules,
+  courseIdQueryValidationRules,
+};

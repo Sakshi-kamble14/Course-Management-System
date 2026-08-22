@@ -1,49 +1,51 @@
 const courseService = require('../services/courseService');
-const { sendSuccess } = require('../utils/response');
+const { success } = require('../utils/response');
+const { asyncHandler } = require('../middleware/errorMiddleware');
 
-const getActiveCourses = async (req, res, next) => {
-  try {
-    const courses = await courseService.getActiveCourses();
-    return sendSuccess(res, 200, 'Active courses fetched successfully', courses);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * GET /course/all-active-courses  (public)
+ */
+const getAllActiveCourses = asyncHandler(async (req, res) => {
+  const courses = await courseService.getAllActiveCourses();
+  return success(res, 200, 'Active courses retrieved successfully', { courses });
+});
 
-const getAllCourses = async (req, res, next) => {
-  try {
-    const courses = await courseService.getAllCourses();
-    return sendSuccess(res, 200, 'All courses fetched successfully', courses);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * GET /course/all-courses  (admin)
+ * Optional query params: startDate, endDate
+ */
+const getAllCourses = asyncHandler(async (req, res) => {
+  const { startDate, endDate } = req.query;
+  const courses = await courseService.getAllCourses({ startDate, endDate });
+  return success(res, 200, 'Courses retrieved successfully', { courses });
+});
 
-const addCourse = async (req, res, next) => {
-  try {
-    const course = await courseService.addCourse(req.body);
-    return sendSuccess(res, 201, 'Course added successfully', course);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * POST /course/add  (admin)
+ */
+const addCourse = asyncHandler(async (req, res) => {
+  const { courseName, description, fees, startDate, endDate, videoExpireDays } = req.body;
+  const course = await courseService.addCourse({ courseName, description, fees, startDate, endDate, videoExpireDays });
+  return success(res, 201, 'Course created successfully', { course });
+});
 
-const updateCourse = async (req, res, next) => {
-  try {
-    const course = await courseService.updateCourse(req.params.courseId, req.body);
-    return sendSuccess(res, 200, 'Course updated successfully', course);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * PUT /course/update/:courseId  (admin)
+ */
+const updateCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  const { courseName, description, fees, startDate, endDate, videoExpireDays } = req.body;
+  const course = await courseService.updateCourse(courseId, { courseName, description, fees, startDate, endDate, videoExpireDays });
+  return success(res, 200, 'Course updated successfully', { course });
+});
 
-const deleteCourse = async (req, res, next) => {
-  try {
-    const deletedCourse = await courseService.deleteCourse(req.params.courseId);
-    return sendSuccess(res, 200, 'Course deleted successfully', deletedCourse);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * DELETE /course/delete/:courseId  (admin)
+ */
+const deleteCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  await courseService.deleteCourse(courseId);
+  return success(res, 200, 'Course deleted successfully. Associated enrollments and videos were removed.');
+});
 
-module.exports = { getActiveCourses, getAllCourses, addCourse, updateCourse, deleteCourse };
+module.exports = { getAllActiveCourses, getAllCourses, addCourse, updateCourse, deleteCourse };

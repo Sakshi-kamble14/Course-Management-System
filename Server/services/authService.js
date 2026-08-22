@@ -1,23 +1,34 @@
-const bcrypt = require('bcrypt');
-const AppError = require('../utils/AppError');
-const { signToken } = require('../config/jwt');
+const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
+const { generateToken } = require('../utils/jwt');
+const { AppError } = require('../middleware/errorMiddleware');
 
-const loginUser = async ({ email, password }) => {
-  const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+/**
+ * Authenticates a user by email + password.
+ * Returns { token, user } on success. Throws AppError(401) on invalid credentials.
+ */
+async function login(email, password) {
+  const [rows] = await pool.execute(
+    'SELECT user_id, email, password, role FROM users WHERE email = ?',
+    [email]
+  );
 
-  if (!users.length) {
-    throw new AppError(401, 'Invalid email or password');
+  if (rows.length === 0) {
+    throw new AppError('Invalid email or password', 401);
   }
 
-  const user = users[0];
-  const isPasswordValid = await bcrypt.compare(password, user.password);
+  const user = rows[0];
 
-  if (!isPasswordValid) {
-    throw new AppError(401, 'Invalid email or password');
+  const passwordMatches = await bcrypt.compare(password, user.password);
+  if (!passwordMatches) {
+    throw new AppError('Invalid email or password', 401);
   }
 
-  const token = signToken({ userId: user.user_id, role: user.role, email: user.email });
+  const token = generateToken({
+    userId: user.user_id,
+    email: user.email,
+    role: user.role,
+  });
 
   return {
     token,
@@ -27,6 +38,6 @@ const loginUser = async ({ email, password }) => {
       role: user.role,
     },
   };
-};
+}
 
-module.exports = { loginUser };
+module.exports = { login };

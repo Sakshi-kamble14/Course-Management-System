@@ -1,21 +1,24 @@
-const sendSuccess = (res, statusCode = 200, message, data = null) => {
-  const payload = { success: true, message };
+/**
+ * Standardized API response helpers.
+ * Ensures every endpoint in the application returns a consistent shape:
+ *   Success: { success: true, message, data }
+ *   Error:   { success: false, message, errors? }
+ */
 
-  if (data !== null) {
-    payload.data = data;
+function success(res, statusCode = 200, message = 'Operation successful', data = null) {
+  const body = { success: true, message };
+  if (data !== null && data !== undefined) {
+    body.data = data;
   }
+  return res.status(statusCode).json(body);
+}
 
-  return res.status(statusCode).json(payload);
-};
-
-const sendError = (res, statusCode = 500, message, errors = null) => {
-  const payload = { success: false, message };
-
+function error(res, statusCode = 500, message = 'Something went wrong', errors = null) {
+  const body = { success: false, message };
   if (errors) {
-    payload.errors = errors;
+    body.errors = errors;
   }
+  return res.status(statusCode).json(body);
+}
 
-  return res.status(statusCode).json(payload);
-};
-
-module.exports = { sendSuccess, sendError };
+module.exports = { success, error };

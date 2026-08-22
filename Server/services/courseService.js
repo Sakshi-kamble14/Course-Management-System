@@ -1,69 +1,123 @@
 const { pool } = require('../config/db');
-const AppError = require('../utils/AppError');
+const { AppError } = require('../middleware/errorMiddleware');
 
-const getActiveCourses = async () => {
-  const [rows] = await pool.query(
-    'SELECT * FROM courses WHERE end_date >= CURDATE() ORDER BY course_id DESC'
+function mapCourseRow(row) {
+  return {
+    courseId: row.course_id,
+    courseName: row.course_name,
+    description: row.description,
+    fees: row.fees,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    videoExpireDays: row.video_expire_days,
+  };
+}
+
+/**
+ * Courses that are currently active based on today's date falling
+ * between start_date and end_date (inclusive).
+ */
+async function getAllActiveCourses() {
+  const [rows] = await pool.execute(
+    `SELECT course_id, course_name, description, fees, start_date, end_date, video_expire_days
+     FROM courses
+     WHERE CURDATE() BETWEEN start_date AND end_date
+     ORDER BY start_date ASC`
   );
+  return rows.map(mapCourseRow);
+}
 
-  return rows;
-};
+/**
+ * All courses, optionally filtered by a start/end date range that
+ * overlaps the requested window.
+ */
+async function getAllCourses({ startDate, endDate } = {}) {
+  let sql = `SELECT course_id, course_name, description, fees, start_date, end_date, video_expire_days
+             FROM courses`;
+  const conditions = [];
+  const params = [];
 
-const getAllCourses = async () => {
-  const [rows] = await pool.query('SELECT * FROM courses ORDER BY course_id DESC');
-  return rows;
-};
+  if (startDate) {
+    conditions.push('start_date >= ?');
+    params.push(startDate);
+  }
+  if (endDate) {
+    conditions.push('end_date <= ?');
+    params.push(endDate);
+  }
 
-const addCourse = async (courseData) => {
-  const { course_name, description, fees, start_date, end_date, video_expire_days } = courseData;
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
 
-  const [result] = await pool.query(
+  sql += ' ORDER BY start_date ASC';
+
+  const [rows] = await pool.execute(sql, params);
+  return rows.map(mapCourseRow);
+}
+
+async function getCourseById(courseId) {
+  const [rows] = await pool.execute(
+    `SELECT course_id, course_name, description, fees, start_date, end_date, video_expire_days
+     FROM courses WHERE course_id = ?`,
+    [courseId]
+  );
+  return rows.length ? mapCourseRow(rows[0]) : null;
+}
+
+async function addCourse({ courseName, description, fees, startDate, endDate, videoExpireDays }) {
+  const [result] = await pool.execute(
     `INSERT INTO courses (course_name, description, fees, start_date, end_date, video_expire_days)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [course_name, description || null, fees, start_date, end_date, video_expire_days]
+    [courseName, description || null, fees, startDate, endDate, videoExpireDays || 180]
   );
+  return getCourseById(result.insertId);
+}
 
-  const [rows] = await pool.query('SELECT * FROM courses WHERE course_id = ?', [result.insertId]);
-  return rows[0];
-};
+async function updateCourse(courseId, { courseName, description, fees, startDate, endDate, videoExpireDays }) {
+  const existing = await getCourseById(courseId);
+  if (!existing) {
+    throw new AppError('Course not found', 404);
+  }
 
-const updateCourse = async (courseId, courseData) => {
-  const current = await getCourseById(courseId);
-
-  const payload = {
-    course_name: courseData.course_name ?? current.course_name,
-    description: courseData.description ?? current.description,
-    fees: courseData.fees ?? current.fees,
-    start_date: courseData.start_date ?? current.start_date,
-    end_date: courseData.end_date ?? current.end_date,
-    video_expire_days: courseData.video_expire_days ?? current.video_expire_days,
-  };
-
-  await pool.query(
+  await pool.execute(
     `UPDATE courses
      SET course_name = ?, description = ?, fees = ?, start_date = ?, end_date = ?, video_expire_days = ?
      WHERE course_id = ?`,
-    [payload.course_name, payload.description, payload.fees, payload.start_date, payload.end_date, payload.video_expire_days, courseId]
+    [courseName, description || null, fees, startDate, endDate, videoExpireDays || existing.videoExpireDays, courseId]
   );
 
-  const [rows] = await pool.query('SELECT * FROM courses WHERE course_id = ?', [courseId]);
-  return rows[0];
-};
+  return getCourseById(courseId);
+}
 
-const deleteCourse = async (courseId) => {
-  const current = await getCourseById(courseId);
-  await pool.query('DELETE FROM courses WHERE course_id = ?', [courseId]);
-  return current;
-};
-
-const getCourseById = async (courseId) => {
-  const [rows] = await pool.query('SELECT * FROM courses WHERE course_id = ?', [courseId]);
-
-  if (!rows.length) {
-    throw new AppError(404, 'Course not found');
+async function deleteCourse(courseId) {
+  const existing = await getCourseById(courseId);
+  if (!existing) {
+    throw new AppError('Course not found', 404);
   }
 
-  return rows[0];
-};
+  // Foreign keys on enrollments.course_id and videos.course_id are defined
+  // with ON DELETE CASCADE, so removing the course automatically removes
+  // its enrollments and videos as well.
+  await pool.execute('DELETE FROM courses WHERE course_id = ?', [courseId]);
+  return true;
+}
 
-module.exports = { getActiveCourses, getAllCourses, addCourse, updateCourse, deleteCourse, getCourseById };
+async function isCourseActive(courseId) {
+  const [rows] = await pool.execute(
+    `SELECT course_id FROM courses
+     WHERE course_id = ? AND CURDATE() BETWEEN start_date AND end_date`,
+    [courseId]
+  );
+  return rows.length > 0;
+}
+
+module.exports = {
+  getAllActiveCourses,
+  getAllCourses,
+  getCourseById,
+  addCourse,
+  updateCourse,
+  deleteCourse,
+  isCourseActive,
+};

@@ -1,13 +1,22 @@
-const { loginUser } = require('../services/authService');
-const { sendSuccess } = require('../utils/response');
+const authService = require('../services/authService');
+const { asyncHandler } = require('../middleware/errorMiddleware');
 
-const login = async (req, res, next) => {
-  try {
-    const result = await loginUser(req.body);
-    return sendSuccess(res, 200, 'Login successful', result);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * POST /auth/login
+ * Response shape matches the project spec exactly:
+ * { success, message, token, user: { userId, email, role } }
+ */
+const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  const { token, user } = await authService.login(email, password);
+
+  return res.status(200).json({
+    success: true,
+    message: 'Login successful',
+    token,
+    user,
+  });
+});
 
 module.exports = { login };

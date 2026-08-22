@@ -1,75 +1,85 @@
 const { pool } = require('../config/db');
-const AppError = require('../utils/AppError');
+const { AppError } = require('../middleware/errorMiddleware');
+const courseService = require('./courseService');
 
-const getAllVideos = async (user = null) => {
-  if (!user || user.role !== 'student') {
-    const [rows] = await pool.query('SELECT * FROM videos ORDER BY video_id DESC');
-    return rows;
-  }
-
-  const [studentRows] = await pool.query('SELECT reg_no FROM students WHERE user_id = ?', [user.userId]);
-
-  if (!studentRows.length) {
-    throw new AppError(404, 'Student profile not found');
-  }
-
-  const [rows] = await pool.query(
-    `SELECT v.*
-     FROM videos v
-     INNER JOIN enrollments e ON e.course_id = v.course_id
-     WHERE e.reg_no = ? AND e.status = 'active'
-     ORDER BY v.video_id DESC`,
-    [studentRows[0].reg_no]
-  );
-
-  return rows;
-};
-
-const addVideo = async (videoData) => {
-  const { course_id, title, description, youtube_url } = videoData;
-
-  const [result] = await pool.query(
-    'INSERT INTO videos (course_id, title, description, youtube_url) VALUES (?, ?, ?, ?)',
-    [course_id, title, description || null, youtube_url]
-  );
-
-  const [rows] = await pool.query('SELECT * FROM videos WHERE video_id = ?', [result.insertId]);
-  return rows[0];
-};
-
-const updateVideo = async (videoId, videoData) => {
-  const current = await getVideoById(videoId);
-
-  const payload = {
-    course_id: videoData.course_id ?? current.course_id,
-    title: videoData.title ?? current.title,
-    description: videoData.description ?? current.description,
-    youtube_url: videoData.youtube_url ?? current.youtube_url,
+function mapVideoRow(row) {
+  return {
+    videoId: row.video_id,
+    courseId: row.course_id,
+    title: row.title,
+    description: row.description,
+    youtubeURL: row.youtube_url,
+    addedAt: row.added_at,
   };
+}
 
-  await pool.query(
-    'UPDATE videos SET course_id = ?, title = ?, description = ?, youtube_url = ? WHERE video_id = ?',
-    [payload.course_id, payload.title, payload.description, payload.youtube_url, videoId]
-  );
+async function getAllVideos(courseId) {
+  let sql = `SELECT video_id, course_id, title, description, youtube_url, added_at FROM videos`;
+  const params = [];
 
-  const [rows] = await pool.query('SELECT * FROM videos WHERE video_id = ?', [videoId]);
-  return rows[0];
-};
-
-const deleteVideo = async (videoId) => {
-  const current = await getVideoById(videoId);
-  await pool.query('DELETE FROM videos WHERE video_id = ?', [videoId]);
-  return current;
-};
-
-const getVideoById = async (videoId) => {
-  const [rows] = await pool.query('SELECT * FROM videos WHERE video_id = ?', [videoId]);
-
-  if (!rows.length) {
-    throw new AppError(404, 'Video not found');
+  if (courseId) {
+    sql += ' WHERE course_id = ?';
+    params.push(courseId);
   }
 
-  return rows[0];
-};
+  sql += ' ORDER BY added_at DESC';
 
-module.exports = { getAllVideos, addVideo, updateVideo, deleteVideo, getVideoById };
+  const [rows] = await pool.execute(sql, params);
+  return rows.map(mapVideoRow);
+}
+
+async function getVideoById(videoId) {
+  const [rows] = await pool.execute(
+    `SELECT video_id, course_id, title, description, youtube_url, added_at
+     FROM videos WHERE video_id = ?`,
+    [videoId]
+  );
+  return rows.length ? mapVideoRow(rows[0]) : null;
+}
+
+async function addVideo({ courseId, title, description, youtubeURL }) {
+  const course = await courseService.getCourseById(courseId);
+  if (!course) {
+    throw new AppError('Cannot add video: course does not exist', 404);
+  }
+
+  const [result] = await pool.execute(
+    `INSERT INTO videos (course_id, title, description, youtube_url)
+     VALUES (?, ?, ?, ?)`,
+    [courseId, title, description || null, youtubeURL]
+  );
+
+  return getVideoById(result.insertId);
+}
+
+async function updateVideo(videoId, { courseId, title, description, youtubeURL }) {
+  const existingVideo = await getVideoById(videoId);
+  if (!existingVideo) {
+    throw new AppError('Video not found', 404);
+  }
+
+  const course = await courseService.getCourseById(courseId);
+  if (!course) {
+    throw new AppError('Cannot update video: course does not exist', 404);
+  }
+
+  await pool.execute(
+    `UPDATE videos SET course_id = ?, title = ?, description = ?, youtube_url = ?
+     WHERE video_id = ?`,
+    [courseId, title, description || null, youtubeURL, videoId]
+  );
+
+  return getVideoById(videoId);
+}
+
+async function deleteVideo(videoId) {
+  const existingVideo = await getVideoById(videoId);
+  if (!existingVideo) {
+    throw new AppError('Video not found', 404);
+  }
+
+  await pool.execute('DELETE FROM videos WHERE video_id = ?', [videoId]);
+  return true;
+}
+
+module.exports = { getAllVideos, getVideoById, addVideo, updateVideo, deleteVideo };

@@ -1,143 +1,225 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
-const AppError = require('../utils/AppError');
+const { AppError } = require('../middleware/errorMiddleware');
+const courseService = require('./courseService');
 
-const getEnrolledStudents = async () => {
-  const [rows] = await pool.query(`
-    SELECT s.reg_no, s.name, s.mobile_no, u.email, c.course_id, c.course_name,
-           e.enrollment_id, e.enrolled_at, e.status
-    FROM enrollments e
-    INNER JOIN students s ON s.reg_no = e.reg_no
-    INNER JOIN users u ON u.user_id = s.user_id
-    INNER JOIN courses c ON c.course_id = e.course_id
-    ORDER BY e.enrollment_id DESC
-  `);
+const SALT_ROUNDS = process.env.BCRYPT_SALT_ROUNDS ? Number(process.env.BCRYPT_SALT_ROUNDS) : 10;
 
-  return rows;
-};
+/**
+ * Look up the students row (reg_no, name, mobile_no, profile_pic) for a
+ * given users.user_id. Returns null if the logged-in user has no student
+ * profile (shouldn't happen for role='student' accounts created correctly,
+ * but guarded defensively).
+ */
+async function getStudentByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT reg_no, user_id, name, mobile_no, profile_pic FROM students WHERE user_id = ?`,
+    [userId]
+  );
+  return rows.length ? rows[0] : null;
+}
 
-const registerStudentToCourse = async (userId, courseId) => {
-  const [studentRows] = await pool.query('SELECT reg_no FROM students WHERE user_id = ?', [userId]);
-
-  if (!studentRows.length) {
-    throw new AppError(404, 'Student profile not found');
+/**
+ * Registers the logged-in student (identified via JWT -> user_id) into a course.
+ * Trusts ONLY the JWT for identity; the request body's courseId is the only
+ * externally supplied value that is used.
+ */
+async function registerToCourse(userId, courseId) {
+  const student = await getStudentByUserId(userId);
+  if (!student) {
+    throw new AppError('Student profile not found for the logged-in user', 404);
   }
 
-  const regNo = studentRows[0].reg_no;
-
-  const [courseRows] = await pool.query('SELECT * FROM courses WHERE course_id = ?', [courseId]);
-  if (!courseRows.length) {
-    throw new AppError(404, 'Course not found');
+  const course = await courseService.getCourseById(courseId);
+  if (!course) {
+    throw new AppError('Course not found', 404);
   }
 
-  const [existing] = await pool.query(
-    'SELECT * FROM enrollments WHERE reg_no = ? AND course_id = ?',
-    [regNo, courseId]
+  const active = await courseService.isCourseActive(courseId);
+  if (!active) {
+    throw new AppError('Course is not currently active for enrollment', 400);
+  }
+
+  const [existingEnrollment] = await pool.execute(
+    `SELECT enrollment_id FROM enrollments WHERE reg_no = ? AND course_id = ?`,
+    [student.reg_no, courseId]
   );
 
-  if (existing.length) {
-    throw new AppError(409, 'Student is already enrolled in this course');
+  if (existingEnrollment.length > 0) {
+    throw new AppError('Student is already enrolled in this course', 409);
   }
 
-  const [result] = await pool.query(
-    'INSERT INTO enrollments (reg_no, course_id, enrolled_at, status) VALUES (?, ?, NOW(), ?)',
-    [regNo, courseId, 'active']
+  // The UNIQUE (reg_no, course_id) constraint is a second line of defense
+  // against race conditions between the check above and this insert.
+  const [result] = await pool.execute(
+    `INSERT INTO enrollments (reg_no, course_id) VALUES (?, ?)`,
+    [student.reg_no, courseId]
   );
 
-  const [rows] = await pool.query('SELECT * FROM enrollments WHERE enrollment_id = ?', [result.insertId]);
-  return rows[0];
-};
-
-const changeStudentPassword = async (userId, currentPassword, newPassword) => {
-  const [rows] = await pool.query('SELECT * FROM users WHERE user_id = ?', [userId]);
-
-  if (!rows.length) {
-    throw new AppError(404, 'User not found');
-  }
-
-  const user = rows[0];
-  const isMatch = await bcrypt.compare(currentPassword, user.password);
-
-  if (!isMatch) {
-    throw new AppError(400, 'Current password is incorrect');
-  }
-
-  const hashed = await bcrypt.hash(newPassword, 10);
-  await pool.query('UPDATE users SET password = ? WHERE user_id = ?', [hashed, userId]);
-
-  return { message: 'Password updated successfully' };
-};
-
-const getStudentCourses = async (userId) => {
-  const [studentRows] = await pool.query('SELECT reg_no FROM students WHERE user_id = ?', [userId]);
-  if (!studentRows.length) {
-    throw new AppError(404, 'Student profile not found');
-  }
-
-  const regNo = studentRows[0].reg_no;
-
-  const [rows] = await pool.query(
-    `SELECT c.*
-     FROM enrollments e
-     INNER JOIN courses c ON c.course_id = e.course_id
-     WHERE e.reg_no = ? AND e.status = 'active'
-     ORDER BY e.enrollment_id DESC`,
-    [regNo]
+  const [rows] = await pool.execute(
+    `SELECT enrollment_id, reg_no, course_id, enrolled_at, status
+     FROM enrollments WHERE enrollment_id = ?`,
+    [result.insertId]
   );
 
-  return rows;
-};
-
-const getStudentCourseWithVideos = async (userId, courseId) => {
-  const [studentRows] = await pool.query('SELECT reg_no FROM students WHERE user_id = ?', [userId]);
-  if (!studentRows.length) {
-    throw new AppError(404, 'Student profile not found');
-  }
-
-  const regNo = studentRows[0].reg_no;
-
-  const [enrollmentRows] = await pool.query(
-    `SELECT e.*, c.*
-     FROM enrollments e
-     INNER JOIN courses c ON c.course_id = e.course_id
-     WHERE e.reg_no = ? AND e.course_id = ? AND e.status = 'active'`,
-    [regNo, courseId]
-  );
-
-  if (!enrollmentRows.length) {
-    throw new AppError(403, 'You are not enrolled in this course');
-  }
-
-  const [videoRows] = await pool.query(
-    `SELECT v.*
-     FROM videos v
-     WHERE v.course_id = ?
-     ORDER BY v.video_id ASC`,
-    [courseId]
-  );
-
-  const expiresAt = new Date(enrollmentRows[0].enrolled_at);
-  expiresAt.setDate(expiresAt.getDate() + enrollmentRows[0].video_expire_days);
-  const isAccessExpired = new Date() > expiresAt;
+  const enrollment = rows[0];
 
   return {
-    course: {
-      ...enrollmentRows[0],
-      accessExpired: isAccessExpired,
-      expires_at: expiresAt.toISOString(),
-    },
-    videos: videoRows.map((video) => ({
-      ...video,
-      accessExpired: isAccessExpired,
-      expires_at: expiresAt.toISOString(),
-    })),
+    enrollmentId: enrollment.enrollment_id,
+    regNo: enrollment.reg_no,
+    courseId: enrollment.course_id,
+    courseName: course.courseName,
+    enrolledAt: enrollment.enrolled_at,
+    status: enrollment.status,
   };
-};
+}
+
+/**
+ * Hashes and stores a new password for the logged-in user.
+ */
+async function changePassword(userId, newPassword) {
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  const [result] = await pool.execute(
+    `UPDATE users SET password = ? WHERE user_id = ?`,
+    [hashedPassword, userId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new AppError('User not found', 404);
+  }
+
+  return true;
+}
+
+/**
+ * All courses the logged-in student is enrolled in.
+ * users -> students -> enrollments -> courses
+ */
+async function getMyCourses(userId) {
+  const student = await getStudentByUserId(userId);
+  if (!student) {
+    throw new AppError('Student profile not found for the logged-in user', 404);
+  }
+
+  const [rows] = await pool.execute(
+    `SELECT c.course_id, c.course_name, c.description, c.fees, c.start_date, c.end_date,
+            c.video_expire_days, e.enrollment_id, e.enrolled_at, e.status
+     FROM students s
+     JOIN enrollments e ON e.reg_no = s.reg_no
+     JOIN courses c ON c.course_id = e.course_id
+     WHERE s.user_id = ?
+     ORDER BY e.enrolled_at DESC`,
+    [userId]
+  );
+
+  return rows.map((row) => ({
+    courseId: row.course_id,
+    courseName: row.course_name,
+    description: row.description,
+    fees: row.fees,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    enrollmentId: row.enrollment_id,
+    enrolledAt: row.enrolled_at,
+    status: row.status,
+  }));
+}
+
+/**
+ * All courses the logged-in student is enrolled in, along with only the
+ * videos that are still within their validity window:
+ *   NOW() <= enrolled_at + INTERVAL video_expire_days DAY
+ * users -> students -> enrollments -> courses -> videos
+ */
+async function getMyCoursesWithVideos(userId) {
+  const student = await getStudentByUserId(userId);
+  if (!student) {
+    throw new AppError('Student profile not found for the logged-in user', 404);
+  }
+
+  const [rows] = await pool.execute(
+    `SELECT
+        c.course_id, c.course_name, e.enrolled_at, c.video_expire_days,
+        v.video_id, v.title, v.description AS video_description, v.youtube_url,
+        (NOW() <= DATE_ADD(e.enrolled_at, INTERVAL c.video_expire_days DAY)) AS video_valid
+     FROM students s
+     JOIN enrollments e ON e.reg_no = s.reg_no
+     JOIN courses c ON c.course_id = e.course_id
+     LEFT JOIN videos v ON v.course_id = c.course_id
+     WHERE s.user_id = ?
+     ORDER BY e.enrolled_at DESC, v.added_at ASC`,
+    [userId]
+  );
+
+  const coursesById = new Map();
+
+  for (const row of rows) {
+    if (!coursesById.has(row.course_id)) {
+      coursesById.set(row.course_id, {
+        courseId: row.course_id,
+        courseName: row.course_name,
+        enrolledAt: row.enrolled_at,
+        videos: [],
+      });
+    }
+
+    // Only include videos that exist (LEFT JOIN may yield null video rows
+    // for courses with no videos yet) AND are still within their expiry window.
+    if (row.video_id && Number(row.video_valid) === 1) {
+      coursesById.get(row.course_id).videos.push({
+        videoId: row.video_id,
+        title: row.title,
+        description: row.video_description,
+        youtubeURL: row.youtube_url,
+      });
+    }
+  }
+
+  return Array.from(coursesById.values());
+}
+
+/**
+ * Admin report: students enrolled in a course (or all courses if courseId omitted).
+ * users -> students -> enrollments -> courses
+ */
+async function getEnrolledStudents(courseId) {
+  let sql = `
+    SELECT
+      s.reg_no, s.name, u.email, s.mobile_no,
+      c.course_id, c.course_name,
+      e.enrolled_at, e.status
+    FROM students s
+    JOIN users u ON u.user_id = s.user_id
+    JOIN enrollments e ON e.reg_no = s.reg_no
+    JOIN courses c ON c.course_id = e.course_id`;
+
+  const params = [];
+  if (courseId) {
+    sql += ' WHERE c.course_id = ?';
+    params.push(courseId);
+  }
+
+  sql += ' ORDER BY c.course_id ASC, e.enrolled_at ASC';
+
+  const [rows] = await pool.execute(sql, params);
+
+  return rows.map((row) => ({
+    regNo: row.reg_no,
+    name: row.name,
+    email: row.email,
+    mobileNo: row.mobile_no,
+    courseId: row.course_id,
+    courseName: row.course_name,
+    enrolledAt: row.enrolled_at,
+    status: row.status,
+  }));
+}
 
 module.exports = {
+  getStudentByUserId,
+  registerToCourse,
+  changePassword,
+  getMyCourses,
+  getMyCoursesWithVideos,
   getEnrolledStudents,
-  registerStudentToCourse,
-  changeStudentPassword,
-  getStudentCourses,
-  getStudentCourseWithVideos,
 };

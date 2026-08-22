@@ -1,17 +1,28 @@
 const express = require('express');
 const router = express.Router();
+
 const studentController = require('../controllers/studentController');
-const { protect, authorize } = require('../middleware/auth');
-const { handleValidationErrors } = require('../utils/validators');
+const { authenticate } = require('../middleware/authMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 const {
-  registerToCourseValidation,
-  changePasswordValidation,
-  courseIdQueryValidation,
+  validate,
+  registerToCourseValidationRules,
+  changePasswordValidationRules,
 } = require('../validators/studentValidator');
 
-router.post('/register-to-course', protect, authorize('student'), registerToCourseValidation, handleValidationErrors, studentController.registerToCourse);
-router.put('/change-password', protect, authorize('student'), changePasswordValidation, handleValidationErrors, studentController.changePassword);
-router.get('/my-courses', protect, authorize('student'), studentController.getMyCourses);
-router.get('/my-course-with-videos', protect, authorize('student'), courseIdQueryValidation, handleValidationErrors, studentController.getMyCourseWithVideos);
+// All student routes require student authentication.
+router.use(authenticate, authorize('student'));
+
+// POST /student/register-to-course
+router.post('/register-to-course', registerToCourseValidationRules, validate, studentController.registerToCourse);
+
+// PUT /student/change-password
+router.put('/change-password', changePasswordValidationRules, validate, studentController.changePassword);
+
+// GET /student/my-courses
+router.get('/my-courses', studentController.getMyCourses);
+
+// GET /student/my-course-with-videos
+router.get('/my-course-with-videos', studentController.getMyCoursesWithVideos);
 
 module.exports = router;

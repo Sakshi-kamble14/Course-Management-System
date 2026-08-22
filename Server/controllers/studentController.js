@@ -1,59 +1,46 @@
 const studentService = require('../services/studentService');
-const { sendSuccess } = require('../utils/response');
+const { success } = require('../utils/response');
+const { asyncHandler } = require('../middleware/errorMiddleware');
 
-const getEnrolledStudents = async (req, res, next) => {
-  try {
-    const students = await studentService.getEnrolledStudents();
-    return sendSuccess(res, 200, 'Enrolled students fetched successfully', students);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * POST /student/register-to-course  (student)
+ * The student's identity comes ONLY from req.user (JWT), never from req.body.email.
+ */
+const registerToCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.body;
+  const { userId } = req.user;
 
-const registerToCourse = async (req, res, next) => {
-  try {
-    const enrollment = await studentService.registerStudentToCourse(req.user.userId, req.body.course_id);
-    return sendSuccess(res, 201, 'Student registered to course successfully', enrollment);
-  } catch (error) {
-    return next(error);
-  }
-};
+  const enrollment = await studentService.registerToCourse(userId, courseId);
+  return success(res, 201, 'Enrollment successful', { enrollment });
+});
 
-const changePassword = async (req, res, next) => {
-  try {
-    const result = await studentService.changeStudentPassword(
-      req.user.userId,
-      req.body.currentPassword,
-      req.body.newPassword
-    );
-    return sendSuccess(res, 200, 'Password changed successfully', result);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * PUT /student/change-password  (student)
+ */
+const changePassword = asyncHandler(async (req, res) => {
+  const { newPassword } = req.body;
+  const { userId } = req.user;
 
-const getMyCourses = async (req, res, next) => {
-  try {
-    const courses = await studentService.getStudentCourses(req.user.userId);
-    return sendSuccess(res, 200, 'My courses fetched successfully', courses);
-  } catch (error) {
-    return next(error);
-  }
-};
+  await studentService.changePassword(userId, newPassword);
+  return success(res, 200, 'Password changed successfully');
+});
 
-const getMyCourseWithVideos = async (req, res, next) => {
-  try {
-    const result = await studentService.getStudentCourseWithVideos(req.user.userId, req.query.course_id);
-    return sendSuccess(res, 200, 'My course videos fetched successfully', result);
-  } catch (error) {
-    return next(error);
-  }
-};
+/**
+ * GET /student/my-courses  (student)
+ */
+const getMyCourses = asyncHandler(async (req, res) => {
+  const { userId } = req.user;
+  const courses = await studentService.getMyCourses(userId);
+  return success(res, 200, 'Courses retrieved successfully', { courses });
+});
 
-module.exports = {
-  getEnrolledStudents,
-  registerToCourse,
-  changePassword,
-  getMyCourses,
-  getMyCourseWithVideos,
-};
+/**
+ * GET /student/my-course-with-videos  (student)
+ */
+const getMyCoursesWithVideos = asyncHandler(async (req, res) => {
+  const { userId } = req.user;
+  const courses = await studentService.getMyCoursesWithVideos(userId);
+  return res.status(200).json({ success: true, courses });
+});
+
+module.exports = { registerToCourse, changePassword, getMyCourses, getMyCoursesWithVideos };

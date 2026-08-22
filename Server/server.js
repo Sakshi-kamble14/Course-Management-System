@@ -1,8 +1,11 @@
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 
-const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+const { testConnection } = require('./config/db');
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+
 const authRoutes = require('./routes/authRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const videoRoutes = require('./routes/videoRoutes');
@@ -10,25 +13,46 @@ const adminRoutes = require('./routes/adminRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// ----- Global middleware -----
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ----- Health check -----
 app.get('/', (req, res) => {
-  res.json({ success: true, message: 'Course Management System API is running' });
+  res.status(200).json({
+    success: true,
+    message: 'MERN Course Management System API is running',
+  });
 });
 
+// ----- Routes -----
 app.use('/auth', authRoutes);
 app.use('/course', courseRoutes);
 app.use('/video', videoRoutes);
 app.use('/admin', adminRoutes);
 app.use('/student', studentRoutes);
 
-app.use(notFoundHandler);
+// ----- 404 + centralized error handling (must be last) -----
+app.use(notFound);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+
+async function start() {
+  try {
+    await testConnection();
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to connect to the database. Server not started.');
+    console.error(err.message);
+    process.exit(1);
+  }
+}
+
+start();
+
+module.exports = app;
