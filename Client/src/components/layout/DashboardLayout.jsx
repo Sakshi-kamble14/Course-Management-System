@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { MenuIcon } from '../common/Icons';
+import { CourseAssistant } from '../student/CourseAssistant';
+import { useAuth } from '../../hooks/useAuth';
 
 export function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isStudent } = useAuth();
 
   return (
     <div className="dash-shell">
@@ -21,6 +24,7 @@ export function DashboardLayout() {
           <Outlet />
         </div>
       </div>
+      {isStudent && <CourseAssistant />}
     </div>
   );
 }

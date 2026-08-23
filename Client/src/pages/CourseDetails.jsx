@@ -12,12 +12,13 @@ import { formatDate, isCourseActiveByDates } from '../utils/formatDate';
 import { formatFees } from '../utils/currency';
 import { CalendarIcon, ClockIcon, RupeeIcon } from '../components/common/Icons';
 import { getYoutubeEmbedUrl } from '../utils/youtube';
+import { CourseAssistant } from '../components/student/CourseAssistant';
 
 export default function CourseDetails() {
   const { courseId } = useParams();
   const [course, setCourse] = useState(null);
   const [status, setStatus] = useState('loading');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const navigate = useNavigate();
 
   const load = () => {
@@ -115,6 +116,7 @@ export default function CourseDetails() {
         )}
       </div>
       <Footer />
+      {isStudent && <CourseAssistant currentCourse={course?.courseName} />}
     </div>
   );
 }

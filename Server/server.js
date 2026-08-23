@@ -11,6 +11,7 @@ const courseRoutes = require('./routes/courseRoutes');
 const videoRoutes = require('./routes/videoRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const studentRoutes = require('./routes/studentRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use('/course', courseRoutes);
 app.use('/video', videoRoutes);
 app.use('/admin', adminRoutes);
 app.use('/student', studentRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ----- 404 + centralized error handling (must be last) -----
 app.use(notFound);

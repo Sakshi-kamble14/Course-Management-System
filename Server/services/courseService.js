@@ -27,6 +27,14 @@ async function getAllActiveCourses() {
   return rows.map(mapCourseRow);
 }
 
+async function getAssistantCourses() {
+  const [rows] = await pool.execute(
+    `SELECT course_id, course_name, description, fees, start_date, end_date, video_expire_days
+     FROM courses WHERE CURDATE() BETWEEN start_date AND end_date ORDER BY start_date ASC`
+  );
+  return rows.map(mapCourseRow);
+}
+
 /**
  * All courses, optionally filtered by a start/end date range that
  * overlaps the requested window.
@@ -125,6 +133,7 @@ async function isCourseActive(courseId) {
 
 module.exports = {
   getAllActiveCourses,
+  getAssistantCourses,
   getAllCourses,
   getCourseById,
   getActiveCourseWithVideos,

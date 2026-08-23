@@ -184,6 +184,18 @@ Error:
 
 ## 7. Detailed Endpoint Documentation
 
+### AI Course Assistant configuration
+The student assistant uses active course data from MySQL and calls Mistral through the server. Keep these values in `Server/.env`; never put the API key in the React app:
+
+```env
+MISTRAL_API_KEY=your-mistral-api-key
+MISTRAL_MODEL=mistral-small-latest
+# Optional Mistral-compatible endpoint override
+# MISTRAL_API_URL=https://api.mistral.ai/v1/chat/completions
+```
+
+`POST /api/ai/chat` requires a student JWT and accepts `{ "question": "...", "currentCourse": "..." }`. Without `MISTRAL_API_KEY`, the endpoint uses a limited catalog-grounded fallback and does not invent course details.
+
 ### `POST /auth/login`
 - Auth: none
 - Body: `{ "email": "student1@gmail.com", "password": "stud123" }`

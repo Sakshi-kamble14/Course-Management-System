@@ -11,13 +11,14 @@ import { useAuth } from '../hooks/useAuth';
 import { useDebounce } from '../hooks/useDebounce';
 import * as courseApi from '../api/courseApi';
 import { InboxIcon } from '../components/common/Icons';
+import { CourseAssistant } from '../components/student/CourseAssistant';
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
   const [status, setStatus] = useState('loading');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const navigate = useNavigate();
 
   const load = () => {
@@ -80,6 +81,7 @@ export default function Courses() {
         )}
       </div>
       <Footer />
+      {isStudent && <CourseAssistant />}
     </div>
   );
 }
