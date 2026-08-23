@@ -11,6 +11,7 @@ import * as courseApi from '../api/courseApi';
 import { formatDate, isCourseActiveByDates } from '../utils/formatDate';
 import { formatFees } from '../utils/currency';
 import { CalendarIcon, ClockIcon, RupeeIcon } from '../components/common/Icons';
+import { getYoutubeEmbedUrl } from '../utils/youtube';
 
 export default function CourseDetails() {
   const { courseId } = useParams();
@@ -21,18 +22,9 @@ export default function CourseDetails() {
 
   const load = () => {
     setStatus('loading');
-    courseApi
-      .getAllActiveCourses()
-      .then((all) => {
-        const found = all.find((c) => String(c.courseId) === String(courseId));
-        if (found) {
-          setCourse(found);
-          setStatus('ready');
-        } else {
-          setStatus('not-found');
-        }
-      })
-      .catch(() => setStatus('error'));
+    courseApi.getActiveCourseWithVideos(courseId)
+      .then((found) => { setCourse(found); setStatus('ready'); })
+      .catch((err) => setStatus(err.response?.status === 404 ? 'not-found' : 'error'));
   };
 
   useEffect(load, [courseId]);
@@ -102,6 +94,22 @@ export default function CourseDetails() {
               >
                 {isAuthenticated ? 'Go enroll' : 'Login to enroll'}
               </Button>
+              {course.videos?.length > 0 && (
+                <div style={{ marginTop: 30 }}>
+                  <h2 style={{ fontSize: 20, marginBottom: 14 }}>Lessons</h2>
+                  <div className="stack gap-sm">
+                    {course.videos.map((video) => (
+                      <div className="card card-pad" key={video.videoId}>
+                        <h3 style={{ fontSize: 16, marginBottom: 5 }}>{video.title}</h3>
+                        <p className="muted" style={{ fontSize: 13.5, marginBottom: 12 }}>{video.description || 'Lesson video'}</p>
+                        <div style={{ aspectRatio: '16 / 9', background: 'var(--ink-950)' }}>
+                          <iframe title={video.title} src={getYoutubeEmbedUrl(video.youtubeURL)} style={{ width: '100%', height: '100%', border: 0 }} allowFullScreen />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}

@@ -44,7 +44,7 @@ export default function StudentDashboard() {
 
   return (
     <div>
-      <PageHeader title="Welcome back!" description={user?.email} />
+      <PageHeader title={`Welcome, ${user?.name || 'back'}!`} description={user?.email} />
 
       <div className="stat-grid">
         {status === 'loading' ? (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { TextField } from '../components/common/TextField';
@@ -16,6 +16,8 @@ export default function Login() {
   const { login } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isStudentLogin = location.pathname === '/student/login';
 
   const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }));
 
@@ -29,7 +31,7 @@ export default function Login() {
     try {
       const user = await login(values.email.trim(), values.password);
       toast.success('Login successful');
-      navigate(user.role === 'admin' ? '/admin/dashboard' : '/student/dashboard');
+      navigate(user.role === 'admin' ? '/admin/dashboard' : '/student/courses');
     } catch (err) {
       toast.error(extractErrorMessage(err));
     } finally {
@@ -54,7 +56,7 @@ export default function Login() {
 
       <div className="auth-form-col">
         <div className="auth-card">
-          <h1>Welcome back</h1>
+          <h1>{isStudentLogin ? 'Student login' : 'Welcome back'}</h1>
           <p className="lead">Log in to continue your courses.</p>
 
           <form onSubmit={handleSubmit} noValidate>
@@ -81,6 +83,7 @@ export default function Login() {
               Log in
             </Button>
           </form>
+          {isStudentLogin && <p className="auth-switch">New student? <Link to="/student/register">Create an account</Link></p>}
 
         </div>
       </div>

@@ -65,6 +65,17 @@ async function getCourseById(courseId) {
   return rows.length ? mapCourseRow(rows[0]) : null;
 }
 
+async function getActiveCourseWithVideos(courseId) {
+  const course = await getCourseById(courseId);
+  if (!course || !(await isCourseActive(courseId))) return null;
+  const [rows] = await pool.execute(
+    `SELECT video_id, title, description, youtube_url
+     FROM videos WHERE course_id = ? ORDER BY added_at ASC`,
+    [courseId]
+  );
+  return { ...course, videos: rows.map((row) => ({ videoId: row.video_id, title: row.title, description: row.description, youtubeURL: row.youtube_url })) };
+}
+
 async function addCourse({ courseName, description, fees, startDate, endDate, videoExpireDays }) {
   const [result] = await pool.execute(
     `INSERT INTO courses (course_name, description, fees, start_date, end_date, video_expire_days)
@@ -116,6 +127,7 @@ module.exports = {
   getAllActiveCourses,
   getAllCourses,
   getCourseById,
+  getActiveCourseWithVideos,
   addCourse,
   updateCourse,
   deleteCourse,

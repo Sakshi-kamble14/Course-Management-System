@@ -729,6 +729,8 @@ table.data-table {
 .auth-card { width: 100%; max-width: 380px; }
 .auth-card h1 { font-size: 26px; margin-bottom: 6px; }
 .auth-card .lead { color: var(--steel-500); font-size: 14px; margin-bottom: 28px; }
+.auth-switch { color: var(--steel-500); font-size: 13.5px; margin-top: 20px; text-align: center; }
+.auth-switch a { color: var(--gold-700); font-weight: 700; }
 /* ============================================================
    Video learning
    ============================================================ */

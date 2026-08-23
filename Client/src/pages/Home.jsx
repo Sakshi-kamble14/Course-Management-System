@@ -56,11 +56,6 @@ export default function Home() {
             <Button variant="gold" onClick={() => navigate('/courses')} icon={ArrowRightIcon}>
               Explore Courses
             </Button>
-            {!isAuthenticated && (
-              <Button variant="outline" onClick={() => navigate('/login')} style={{ color: '#fff', borderColor: 'var(--ink-600)' }}>
-                Login
-              </Button>
-            )}
           </div>
 
           <div className="hero-ledger">

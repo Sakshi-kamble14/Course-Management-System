@@ -5,7 +5,7 @@ import { Button } from '../common/Button';
 import { GraduationCapIcon, MenuIcon, XIcon } from '../common/Icons';
 
 export function Navbar() {
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -36,14 +36,14 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <NavLink to={dashboardPath} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                Dashboard
+                {user?.name || 'Dashboard'}
               </NavLink>
               <Button variant="outline" size="sm" onClick={handleLogout} style={{ marginLeft: 8 }}>
                 Log out
               </Button>
             </>
           ) : (
-            <Button variant="primary" size="sm" onClick={() => navigate('/login')} style={{ marginLeft: 8 }}>
+              <Button variant="primary" size="sm" onClick={() => navigate('/student/login')} style={{ marginLeft: 8 }}>
               Login
             </Button>
           )}
@@ -66,14 +66,14 @@ export function Navbar() {
             {isAuthenticated ? (
               <>
                 <NavLink to={dashboardPath} className="nav-link" onClick={() => setOpen(false)}>
-                  Dashboard
+                  {user?.name || 'Dashboard'}
                 </NavLink>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
                   Log out
                 </Button>
               </>
             ) : (
-              <Button variant="primary" size="sm" onClick={() => { setOpen(false); navigate('/login'); }}>
+              <Button variant="primary" size="sm" onClick={() => { setOpen(false); navigate('/student/login'); }}>
                 Login
               </Button>
             )}

@@ -30,6 +30,14 @@ export function AuthProvider({ children }) {
     return loggedInUser;
   }, []);
 
+  const register = useCallback(async (values) => {
+    const { token, user: registeredUser } = await authApi.register(values);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(registeredUser));
+    setUser(registeredUser);
+    return registeredUser;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -43,6 +51,7 @@ export function AuthProvider({ children }) {
     isStudent: user?.role === 'student',
     initializing,
     login,
+    register,
     logout,
   };
 

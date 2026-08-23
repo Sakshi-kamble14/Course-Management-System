@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import Courses from './pages/Courses';
 import CourseDetails from './pages/CourseDetails';
 import Login from './pages/Login';
+import Register from './pages/student/Register';
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
 
@@ -16,6 +17,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageCourses from './pages/admin/ManageCourses';
 import ManageVideos from './pages/admin/ManageVideos';
 import EnrolledStudents from './pages/admin/EnrolledStudents';
+import ManageAdmins from './pages/admin/ManageAdmins';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import AvailableCourses from './pages/student/AvailableCourses';
@@ -39,6 +41,8 @@ export default function App() {
             {/* Guest-only */}
             <Route element={<GuestRoute />}>
               <Route path="/login" element={<Login />} />
+              <Route path="/student/login" element={<Login />} />
+              <Route path="/student/register" element={<Register />} />
             </Route>
 
             {/* Admin */}
@@ -48,6 +52,7 @@ export default function App() {
                 <Route path="/admin/courses" element={<ManageCourses />} />
                 <Route path="/admin/videos" element={<ManageVideos />} />
                 <Route path="/admin/students" element={<EnrolledStudents />} />
+                <Route path="/admin/admins" element={<ManageAdmins />} />
               </Route>
             </Route>
 

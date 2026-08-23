@@ -5,6 +5,11 @@ export function getAllActiveCourses() {
   return api.get('/course/all-active-courses').then((res) => res.data.data.courses);
 }
 
+// GET /course/:courseId (public active course) -> { data: { course } }
+export function getActiveCourseWithVideos(courseId) {
+  return api.get(`/course/${courseId}`).then((res) => res.data.data.course);
+}
+
 // GET /course/all-courses (admin, optional startDate/endDate query) -> { data: { courses } }
 export function getAllCourses(params = {}) {
   return api.get('/course/all-courses', { params }).then((res) => res.data.data.courses);

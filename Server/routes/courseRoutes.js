@@ -55,4 +55,7 @@ router.delete(
   courseController.deleteCourse
 );
 
+// GET /course/:courseId (public active course with lessons)
+router.get('/:courseId', courseController.getActiveCourseWithVideos);
+
 module.exports = router;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../../components/common/PageHeader';
 import { CourseCard } from '../../components/course/CourseCard';
 import { SearchBox } from '../../components/common/SearchBox';
@@ -90,15 +91,14 @@ export default function AvailableCourses() {
                 key={c.courseId}
                 course={c}
                 footer={
-                  isEnrolled ? (
-                    <Badge tone="teal" dot className="btn-block" style={{ justifyContent: 'center', padding: '10px 0', width: '100%' }}>
-                      <CheckIcon size={13} /> Already enrolled
-                    </Badge>
-                  ) : (
-                    <Button variant="gold" block onClick={() => { setFormErrors({}); setEnrollTarget(c); }}>
-                      Enroll
-                    </Button>
-                  )
+                  <>
+                    <Link className="btn btn-outline" to={`/courses/${c.courseId}`}>View details</Link>
+                    {isEnrolled ? (
+                      <Badge tone="teal" dot className="btn-block" style={{ justifyContent: 'center', padding: '10px 0', width: '100%' }}><CheckIcon size={13} /> Already enrolled</Badge>
+                    ) : (
+                      <Button variant="gold" block onClick={() => { setFormErrors({}); setEnrollTarget(c); }}>Enroll Now</Button>
+                    )}
+                  </>
                 }
               />
             );

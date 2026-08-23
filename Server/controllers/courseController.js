@@ -10,6 +10,12 @@ const getAllActiveCourses = asyncHandler(async (req, res) => {
   return success(res, 200, 'Active courses retrieved successfully', { courses });
 });
 
+const getActiveCourseWithVideos = asyncHandler(async (req, res) => {
+  const course = await courseService.getActiveCourseWithVideos(req.params.courseId);
+  if (!course) return res.status(404).json({ success: false, message: 'Course not available' });
+  return success(res, 200, 'Course retrieved successfully', { course });
+});
+
 /**
  * GET /course/all-courses  (admin)
  * Optional query params: startDate, endDate
@@ -48,4 +54,4 @@ const deleteCourse = asyncHandler(async (req, res) => {
   return success(res, 200, 'Course deleted successfully. Associated enrollments and videos were removed.');
 });
 
-module.exports = { getAllActiveCourses, getAllCourses, addCourse, updateCourse, deleteCourse };
+module.exports = { getAllActiveCourses, getActiveCourseWithVideos, getAllCourses, addCourse, updateCourse, deleteCourse };

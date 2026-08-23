@@ -15,6 +15,22 @@ export function validateLogin({ email, password }) {
   return errors;
 }
 
+export function validateRegistration({ fullName, email, password, confirmPassword }) {
+  const errors = validateLogin({ email, password });
+  if (!fullName?.trim()) errors.fullName = 'Full name is required';
+  else if (fullName.trim().length > 100) errors.fullName = 'Full name must be at most 100 characters';
+  if (!confirmPassword) errors.confirmPassword = 'Confirm password is required';
+  else if (confirmPassword !== password) errors.confirmPassword = 'Confirm password does not match password';
+  return errors;
+}
+
+export function validateAdminCreation({ email, password, confirmPassword }) {
+  const errors = validateLogin({ email, password });
+  if (!confirmPassword) errors.confirmPassword = 'Confirm password is required';
+  else if (confirmPassword !== password) errors.confirmPassword = 'Confirm password does not match password';
+  return errors;
+}
+
 export function validateCourse({ courseName, fees, startDate, endDate, videoExpireDays }) {
   const errors = {};
   if (!courseName?.trim()) errors.courseName = 'courseName is required';

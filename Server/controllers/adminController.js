@@ -1,4 +1,5 @@
 const studentService = require('../services/studentService');
+const authService = require('../services/authService');
 const { success } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 
@@ -12,4 +13,10 @@ const getEnrolledStudents = asyncHandler(async (req, res) => {
   return success(res, 200, 'Enrolled students retrieved successfully', { students });
 });
 
-module.exports = { getEnrolledStudents };
+const createAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const admin = await authService.createAdmin(email, password);
+  return success(res, 201, 'Admin account created successfully', { admin });
+});
+
+module.exports = { getEnrolledStudents, createAdmin };

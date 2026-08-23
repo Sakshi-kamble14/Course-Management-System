@@ -17,6 +17,7 @@ const ADMIN_LINKS = [
   { to: '/admin/courses', label: 'Courses', icon: BookIcon },
   { to: '/admin/videos', label: 'Videos', icon: VideoIcon },
   { to: '/admin/students', label: 'Enrolled Students', icon: UsersIcon },
+  { to: '/admin/admins', label: 'Manage Admins', icon: KeyIcon },
 ];
 
 const STUDENT_LINKS = [
@@ -31,7 +32,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }) {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const links = isAdmin ? ADMIN_LINKS : STUDENT_LINKS;
-  const initials = (user?.email || '?').slice(0, 2).toUpperCase();
+  const initials = (user?.name || user?.email || '?').slice(0, 2).toUpperCase();
 
   const handleLogout = () => {
     logout();
@@ -69,7 +70,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }) {
           <div className="sidebar-user">
             <span className="avatar">{initials}</span>
             <div className="sidebar-user-info">
-              <div className="name">{user?.email}</div>
+              <div className="name">{user?.name || user?.email}</div>
               <div className="role">{user?.role}</div>
             </div>
           </div>

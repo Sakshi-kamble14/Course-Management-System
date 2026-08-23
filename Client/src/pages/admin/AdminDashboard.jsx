@@ -12,7 +12,7 @@ import * as adminApi from '../../api/adminApi';
 import { formatDate, isCourseActiveByDates } from '../../utils/formatDate';
 import { formatFees } from '../../utils/currency';
 import { useAuth } from '../../hooks/useAuth';
-import { BookIcon, UsersIcon, LayersIcon, PlusIcon, VideoIcon, AwardIcon } from '../../components/common/Icons';
+import { BookIcon, UsersIcon, LayersIcon, PlusIcon, VideoIcon, AwardIcon, KeyIcon } from '../../components/common/Icons';
 
 export default function AdminDashboard() {
   const [courses, setCourses] = useState([]);
@@ -90,6 +90,9 @@ export default function AdminDashboard() {
         </Button>
         <Button variant="outline" icon={UsersIcon} onClick={() => navigate('/admin/students')}>
           View Students
+        </Button>
+        <Button variant="outline" icon={KeyIcon} onClick={() => navigate('/admin/admins')}>
+          Add Admin
         </Button>
       </div>
 
