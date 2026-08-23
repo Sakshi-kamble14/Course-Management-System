@@ -2,7 +2,7 @@
 
 A full-stack **Course Management System** built using **React.js, Vite, Node.js, Express.js, and MySQL**.
 
-The system provides separate dashboards for **Administrators and Students**, allowing administrators to manage courses, videos, and enrollments while students can browse courses, enroll, and access course videos.
+The system provides separate dashboards for **Administrators and Students**, allowing administrators to manage courses, videos, students, and enrollments while students can register, browse courses without enrolling, enroll in courses, access course videos, and get assistance from an **AI Course Assistant Chatbot**.
 
 ---
 
@@ -25,13 +25,15 @@ The system provides separate dashboards for **Administrators and Students**, all
 * View enrolled students
 * Filter students by course
 * Search courses and students
+* Manage course availability
 * Responsive admin dashboard
 
 ### 👨‍🎓 Student
 
+* Student registration
 * Secure student login
 * Student dashboard
-* View available courses
+* Browse available courses without enrollment
 * View course details
 * Enroll in courses
 * View enrolled courses
@@ -40,6 +42,17 @@ The system provides separate dashboards for **Administrators and Students**, all
 * Course-based learning interface
 * Change password
 * Responsive student dashboard
+
+### 🤖 AI Course Assistant
+
+* AI-powered course chatbot
+* Ask course-related questions
+* Course recommendations
+* Learning path suggestions
+* Course prerequisite guidance
+* Explain course concepts in simple language
+* Suggest courses based on student interests
+* Secure backend AI API integration
 
 ---
 
@@ -67,6 +80,11 @@ The system provides separate dashboards for **Administrators and Students**, all
 
 * MySQL
 
+### AI
+
+* AI Course Assistant
+* Secure backend AI API integration
+
 ### Development Tools
 
 * Visual Studio Code
@@ -81,14 +99,14 @@ The system provides separate dashboards for **Administrators and Students**, all
 
 ```text
 Course-Management-System/
+
 │
 ├── Client/
 │   ├── public/
 │   │
 │   ├── src/
-│   │   │
 │   │   ├── assets/
-│   │   │
+│   │
 │   │   ├── components/
 │   │   │   ├── admin/
 │   │   │   │   ├── AdminDashboard.jsx
@@ -107,7 +125,8 @@ Course-Management-System/
 │   │   │   │   ├── StudentNavbar.jsx
 │   │   │   │   ├── CourseCard.jsx
 │   │   │   │   ├── VideoPlayer.jsx
-│   │   │   │   └── VideoList.jsx
+│   │   │   │   ├── VideoList.jsx
+│   │   │   │   └── CourseChatbot.jsx
 │   │   │   │
 │   │   │   ├── courses/
 │   │   │   │   ├── CourseCard.jsx
@@ -122,43 +141,47 @@ Course-Management-System/
 │   │   │       ├── PageHeader.jsx
 │   │   │       ├── SearchInput.jsx
 │   │   │       └── StatusBadge.jsx
-│   │   │
+│   │
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
 │   │   │   ├── Login.jsx
+│   │   │   ├── StudentRegister.jsx
 │   │   │   ├── Courses.jsx
-│   │   │   │
+│   │   │
 │   │   │   ├── admin/
 │   │   │   │   ├── AdminCourses.jsx
 │   │   │   │   ├── AdminVideos.jsx
 │   │   │   │   └── EnrolledStudents.jsx
-│   │   │   │
+│   │   │
 │   │   │   └── student/
+│   │   │       ├── StudentDashboard.jsx
 │   │   │       ├── AvailableCourses.jsx
+│   │   │       ├── CourseDetails.jsx
 │   │   │       ├── MyCourses.jsx
 │   │   │       ├── MyLearning.jsx
 │   │   │       ├── VideoLearning.jsx
 │   │   │       └── ChangePassword.jsx
-│   │   │
+│   │
 │   │   ├── services/
 │   │   │   ├── api.js
 │   │   │   ├── authService.js
 │   │   │   ├── courseService.js
 │   │   │   ├── videoService.js
-│   │   │   └── studentService.js
-│   │   │
+│   │   │   ├── studentService.js
+│   │   │   └── aiService.js
+│   │
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx
-│   │   │
+│   │
 │   │   ├── routes/
 │   │   │   ├── ProtectedRoute.jsx
 │   │   │   ├── AdminRoute.jsx
 │   │   │   └── StudentRoute.jsx
-│   │   │
+│   │
 │   │   ├── utils/
 │   │   │   ├── formatDate.js
 │   │   │   └── youtube.js
-│   │   │
+│   │
 │   │   ├── App.jsx
 │   │   ├── App.css
 │   │   ├── index.css
@@ -193,6 +216,7 @@ After successful login, the frontend stores:
 ```text
 token
 user
+role
 ```
 
 in `localStorage`.
@@ -207,7 +231,7 @@ with protected API requests.
 
 ### User Roles
 
-The system supports two roles:
+The system supports:
 
 ```text
 ADMIN
@@ -227,11 +251,12 @@ Student → /student/dashboard
 
 ## Public Routes
 
-| Route      | Description       |
-| ---------- | ----------------- |
-| `/`        | Home page         |
-| `/courses` | Available courses |
-| `/login`   | Login page        |
+| Route               | Description          |
+| ------------------- | -------------------- |
+| `/`                 | Home page            |
+| `/courses`          | Available courses    |
+| `/login`            | Login page           |
+| `/student/register` | Student registration |
 
 ## Admin Routes
 
@@ -244,13 +269,44 @@ Student → /student/dashboard
 
 ## Student Routes
 
-| Route                      | Description        |
-| -------------------------- | ------------------ |
-| `/student/dashboard`       | Student dashboard  |
-| `/student/courses`         | Available courses  |
-| `/student/my-courses`      | Enrolled courses   |
-| `/student/learning`        | Learning dashboard |
-| `/student/change-password` | Change password    |
+| Route                      | Description              |
+| -------------------------- | ------------------------ |
+| `/student/dashboard`       | Student dashboard        |
+| `/student/courses`         | Browse available courses |
+| `/student/course/:id`      | View course details      |
+| `/student/my-courses`      | Enrolled courses         |
+| `/student/learning`        | Learning dashboard       |
+| `/student/change-password` | Change password          |
+
+---
+
+# 🤖 AI Course Assistant
+
+Students can access the AI chatbot from the student dashboard and course pages.
+
+Example questions:
+
+```text
+Which course should I learn first?
+
+What are the prerequisites for React?
+
+What should I learn after JavaScript?
+
+Which course is best for becoming a Full Stack Developer?
+
+Explain this course in simple words.
+```
+
+The chatbot can provide:
+
+* Course recommendations
+* Learning guidance
+* Prerequisite information
+* Course explanations
+* Learning path suggestions
+
+The AI API key must remain on the **backend** and must never be exposed in the React frontend.
 
 ---
 
@@ -280,8 +336,6 @@ VITE_API_URL=http://localhost:5000
 POST /auth/login
 ```
 
----
-
 ## Courses
 
 ```http
@@ -292,8 +346,6 @@ PUT    /course/update/:courseId
 DELETE /course/delete/:courseId
 ```
 
----
-
 ## Videos
 
 ```http
@@ -303,16 +355,12 @@ PUT    /video/update/:videoId
 DELETE /video/delete/:videoId
 ```
 
----
-
 ## Admin
 
 ```http
 GET /admin/enrolled-students
 GET /admin/enrolled-students?courseId=:courseId
 ```
-
----
 
 ## Student
 
@@ -322,6 +370,14 @@ GET  /student/my-courses
 GET  /student/my-course-with-videos
 PUT  /student/change-password
 ```
+
+## AI Assistant
+
+```http
+POST /ai/chat
+```
+
+> The exact AI endpoint should match the endpoint implemented in the backend.
 
 ---
 
@@ -342,6 +398,8 @@ cd Course-Management-System
 ---
 
 # 🖥️ Frontend Setup
+
+Open a terminal.
 
 Navigate to the Client folder:
 
@@ -377,7 +435,7 @@ http://localhost:5173
 
 # 🖥️ Backend Setup
 
-Open another terminal.
+Open a **second terminal**.
 
 Navigate to the Server folder:
 
@@ -391,17 +449,19 @@ Install dependencies:
 npm install
 ```
 
-Create your backend `.env` file with your MySQL/database configuration.
-
-Example:
+Create a `.env` file:
 
 ```env
 PORT=5000
+
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=your_database
-JWT_SECRET=your_secret_key
+DB_PASSWORD=your_mysql_password
+DB_NAME=course_management
+
+JWT_SECRET=your_jwt_secret
+
+AI_API_KEY=your_ai_api_key
 ```
 
 Start the backend:
@@ -410,10 +470,44 @@ Start the backend:
 node server.js
 ```
 
-For development with nodemon:
+If the project has a development script:
 
 ```bash
 npm run dev
+```
+
+The backend will normally run at:
+
+```text
+http://localhost:5000
+```
+
+---
+
+# 🚀 Quick Start
+
+You need **two terminals**.
+
+### Terminal 1 — Backend
+
+```bash
+cd Server
+npm install
+node server.js
+```
+
+### Terminal 2 — Frontend
+
+```bash
+cd Client
+npm install
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5173
 ```
 
 ---
@@ -422,86 +516,52 @@ npm run dev
 
 The application uses **MySQL**.
 
-The database contains information related to:
-
-* Users
-* Courses
-* Videos
-* Student enrollments
-
 Make sure MySQL is running before starting the backend.
 
-Import the provided SQL/database schema before using the application.
+Create the required database:
+
+```sql
+CREATE DATABASE course_management;
+```
+
+Import the provided SQL/schema file if available.
+
+Update the backend `.env` according to your MySQL configuration:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=course_management
+```
 
 ---
 
-# 👤 Demo Login Credentials
+# 👤 Student Registration Flow
 
-### Admin
+A student does not need to enroll immediately after creating an account.
 
-```text
-Email: admin@mern.com
-Password: admin123
-```
-
-### Student
+The flow is:
 
 ```text
-Email: student1@gmail.com
-Password: stud123
+Student Registration
+        ↓
+Student Login
+        ↓
+Browse Available Courses
+        ↓
+View Course Details
+        ↓
+Use AI Course Assistant
+        ↓
+Choose Course
+        ↓
+Enroll
+        ↓
+Access Course Videos
 ```
 
-Additional test students may be available depending on the database seed data.
-
-> These credentials are intended for local development/testing only.
-
----
-
-# 📊 Admin Dashboard
-
-The Admin Dashboard provides:
-
-* Course statistics
-* Student statistics
-* Enrollment statistics
-* Active course statistics
-* Recent courses
-* Recent enrollments
-* Quick actions
-
-The dashboard is component-based.
-
-```text
-AdminDashboard
-│
-├── AdminLayout
-│   ├── AdminSidebar
-│   └── AdminNavbar
-│
-├── DashboardStats
-├── RecentCourses
-├── RecentEnrollments
-└── QuickActions
-```
-
-This architecture keeps the frontend maintainable and reusable.
-
----
-
-# 🎓 Student Learning
-
-Students can:
-
-1. Login
-2. Browse active courses
-3. Enroll in a course
-4. View enrolled courses
-5. Open their learning dashboard
-6. Select course videos
-7. Watch YouTube-based course content
-8. Change their password
-
-The backend controls which videos are available to the student.
+Registration and enrollment are treated as separate actions.
 
 ---
 
@@ -510,14 +570,26 @@ The backend controls which videos are available to the student.
 The application implements:
 
 * JWT authentication
-* Role-based authorization
 * Protected routes
+* Role-based authorization
 * Admin route protection
 * Student route protection
 * Axios authentication interceptor
 * Password validation
+* Secure backend AI API integration
 * No password storage in localStorage
 * Automatic logout on unauthorized requests
+
+Never commit `.env` files to GitHub.
+
+Add the following to `.gitignore`:
+
+```gitignore
+node_modules/
+.env
+.env.local
+dist/
+```
 
 ---
 
@@ -530,15 +602,13 @@ The application is designed to work across:
 * 📱 Tablet
 * 📱 Mobile
 
-The admin sidebar automatically adapts to smaller screen sizes.
-
-Tables support horizontal scrolling on mobile devices.
+The dashboards, navigation, cards, forms, tables, course pages, and chatbot are responsive.
 
 ---
 
 # 🧩 Component-Based Architecture
 
-The frontend follows a reusable component architecture:
+The frontend follows a reusable architecture:
 
 ```text
 Pages
@@ -556,21 +626,33 @@ Express Backend
 MySQL Database
 ```
 
-This makes the project:
+The AI chatbot follows:
 
-* Easier to maintain
-* Easier to test
-* Easier to scale
-* More reusable
-* More professional
+```text
+Student
+   ↓
+React Chatbot
+   ↓
+AI Service
+   ↓
+Express API
+   ↓
+AI Provider
+   ↓
+Response
+   ↓
+React Chatbot
+```
+
+This makes the application easier to maintain, test, and scale.
 
 ---
 
 # 🧪 Testing
 
-You can test the backend APIs using **Postman**.
+You can test backend APIs using **Postman**.
 
-Test the following flow:
+Recommended flow:
 
 ```text
 1. Login
@@ -578,10 +660,13 @@ Test the following flow:
 3. Add Authorization header
 4. Create course
 5. Create video
-6. Enroll student
-7. Get enrolled students
-8. Get student courses
-9. Get course videos
+6. Register student
+7. Browse courses
+8. Enroll student
+9. Get enrolled students
+10. Get student courses
+11. Get course videos
+12. Test AI chatbot
 ```
 
 Frontend testing:
@@ -593,13 +678,18 @@ npm run dev
 Then test:
 
 ```text
+Student Registration
 Login
+Browse Courses
+Course Details
+AI Chatbot
+Enrollment
+My Courses
+Learning Videos
 Admin Dashboard
 Course Management
 Video Management
-Student Enrollment
-My Courses
-Learning Videos
+Student Management
 Logout
 ```
 
@@ -633,27 +723,49 @@ Preview production build:
 npm run preview
 ```
 
+### Backend
+
+Install packages:
+
+```bash
+npm install
+```
+
+Start server:
+
+```bash
+node server.js
+```
+
+Development mode:
+
+```bash
+npm run dev
+```
+
 ---
 
 # 🌐 Production Build
 
-Create a production build:
+Create a production frontend build:
 
 ```bash
 npm run build
 ```
 
-The generated production files will be available inside:
+The generated files will be available inside:
 
 ```text
 dist/
 ```
 
-Before deploying, update:
+Before deployment, update:
 
 ```env
 VITE_API_URL=<production-backend-url>
 ```
+
+Also configure the production backend environment variables and database connection.
 
 ---
 
@@ -663,10 +775,11 @@ Possible future improvements:
 
 * Course progress tracking
 * Course completion certificates
+* AI-generated quizzes
+* AI-generated course summaries
 * Student profile management
-* Admin profile management
 * Course categories
-* Course search and advanced filters
+* Advanced course search
 * Pagination
 * Email notifications
 * Forgot password
@@ -708,6 +821,7 @@ This project demonstrates practical knowledge of:
 * Responsive UI
 * API error handling
 * Reusable components
+* AI API integration
 * Full-stack application development
 
 ---
