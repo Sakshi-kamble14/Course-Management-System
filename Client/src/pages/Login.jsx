@@ -82,11 +82,6 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="demo-creds">
-            <strong>Demo credentials</strong>
-            <div className="cred-row"><span>Admin</span><span>admin@mern.com / admin123</span></div>
-            <div className="cred-row"><span>Student</span><span>student1@gmail.com / stud123</span></div>
-          </div>
         </div>
       </div>
     </div>
